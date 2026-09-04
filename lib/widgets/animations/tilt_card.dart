@@ -22,34 +22,56 @@ class TiltCard extends StatefulWidget {
     this.hoverBorderColor,
     this.backgroundColor,
     this.padding,
-    this.maxTiltAngle = 0.08,
+    this.maxTiltAngle = 0.06,
   });
 
   @override
   State<TiltCard> createState() => _TiltCardState();
 }
 
-class _TiltCardState extends State<TiltCard>
-    with SingleTickerProviderStateMixin {
+class _TiltCardState extends State<TiltCard> with SingleTickerProviderStateMixin {
   double _rotateX = 0;
   double _rotateY = 0;
   bool _isHovered = false;
   Offset _localMousePos = Offset.zero;
 
-  void _onHover(PointerEvent event, Size size) {
-    final x = event.localPosition.dx;
-    final y = event.localPosition.dy;
-    final centerX = size.width / 2;
-    final centerY = size.height / 2;
+  void _onHover(PointerEvent event) {
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) return;
 
-    // Normalize between -1.0 and 1.0
-    final percentX = (x - centerX) / centerX;
-    final percentY = (y - centerY) / centerY;
+    final cardSize = renderBox.size;
+    if (!cardSize.width.isFinite ||
+        !cardSize.height.isFinite ||
+        cardSize.width <= 0 ||
+        cardSize.height <= 0) {
+      return;
+    }
+
+    final x = event.localPosition.dx.clamp(0.0, cardSize.width);
+    final y = event.localPosition.dy.clamp(0.0, cardSize.height);
+    final centerX = cardSize.width / 2;
+    final centerY = cardSize.height / 2;
+
+    final percentX = ((x - centerX) / centerX).clamp(-1.0, 1.0);
+    final percentY = ((y - centerY) / centerY).clamp(-1.0, 1.0);
+
+    if (percentX.isNaN || percentY.isNaN) return;
+
+    final newRotateX = (-percentY * widget.maxTiltAngle).clamp(
+      -widget.maxTiltAngle,
+      widget.maxTiltAngle,
+    );
+    final newRotateY = (percentX * widget.maxTiltAngle).clamp(
+      -widget.maxTiltAngle,
+      widget.maxTiltAngle,
+    );
+
+    if (newRotateX.isNaN || newRotateY.isNaN) return;
 
     setState(() {
-      _rotateX = -percentY * widget.maxTiltAngle;
-      _rotateY = percentX * widget.maxTiltAngle;
-      _localMousePos = event.localPosition;
+      _rotateX = newRotateX;
+      _rotateY = newRotateY;
+      _localMousePos = Offset(x, y);
     });
   }
 
@@ -73,90 +95,72 @@ class _TiltCardState extends State<TiltCard>
         ? (widget.hoverBorderColor ?? AppColors.cyan)
         : (widget.borderColor ?? AppColors.cardBorder);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
+    return MouseRegion(
+      cursor: widget.onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: _onEnter,
+      onExit: _onExit,
+      onHover: _onHover,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: _isHovered ? 1.0 : 0.0),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          builder: (context, animVal, _) {
+            final scaleVal = 1.0 + (0.015 * animVal);
 
-        return MouseRegion(
-          cursor: widget.onTap != null
-              ? SystemMouseCursors.click
-              : SystemMouseCursors.basic,
-          onEnter: _onEnter,
-          onExit: _onExit,
-          onHover: (e) => _onHover(e, size),
-          child: GestureDetector(
-            onTap: widget.onTap,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(
-                begin: 0,
-                end: _isHovered ? 1.0 : 0.0,
-              ),
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
-              builder: (context, animVal, _) {
-                return Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.identity()
-                    ..setEntry(3, 2, 0.001) // perspective depth
-                    ..rotateX(_rotateX)
-                    ..rotateY(_rotateY)
-                    ..scaleByDouble(
-                      1.0 + (0.015 * animVal),
-                      1.0 + (0.015 * animVal),
-                      1.0,
-                      1.0,
+            return Transform(
+              alignment: Alignment.center,
+              transformHitTests: false,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.0008) // safe perspective depth
+                ..rotateX(_rotateX)
+                ..rotateY(_rotateY)
+                ..scaleByDouble(scaleVal, scaleVal, 1.0, 1.0),
+              child: Container(
+                padding: widget.padding ?? const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: widget.backgroundColor ?? AppColors.cardBg,
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  border: Border.all(color: activeBorderColor, width: _isHovered ? 1.5 : 1.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
-                  child: Container(
-                    padding: widget.padding ?? const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: widget.backgroundColor ?? AppColors.cardBg,
-                      borderRadius: BorderRadius.circular(widget.borderRadius),
-                      border: Border.all(
-                        color: activeBorderColor,
-                        width: _isHovered ? 1.5 : 1.0,
+                    if (_isHovered)
+                      BoxShadow(
+                        color: (widget.hoverBorderColor ?? AppColors.cyan).withValues(alpha: 0.15),
+                        blurRadius: 30,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 5),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                        if (_isHovered)
-                          BoxShadow(
-                            color: (widget.hoverBorderColor ?? AppColors.cyan)
-                                .withValues(alpha: 0.15),
-                            blurRadius: 30,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 5),
-                          ),
-                      ],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Stack(
-                      children: [
-                        // Dynamic mouse spotlight glow
-                        if (_isHovered)
-                          Positioned.fill(
-                            child: IgnorePointer(
-                              child: CustomPaint(
-                                painter: _SpotlightPainter(
-                                  mousePos: _localMousePos,
-                                  glowColor: widget.hoverBorderColor ??
-                                      AppColors.cyan,
-                                ),
-                              ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  children: [
+                    // Dynamic mouse spotlight glow
+                    if (_isHovered)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: _SpotlightPainter(
+                              mousePos: _localMousePos,
+                              glowColor: widget.hoverBorderColor ?? AppColors.cyan,
                             ),
                           ),
-                        widget.child,
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      },
+                        ),
+                      ),
+                    widget.child,
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -169,17 +173,18 @@ class _SpotlightPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (!size.width.isFinite || !size.height.isFinite || size.width <= 0 || size.height <= 0) {
+      return;
+    }
+
+    final normX = ((mousePos.dx / size.width) * 2 - 1).clamp(-1.0, 1.0);
+    final normY = ((mousePos.dy / size.height) * 2 - 1).clamp(-1.0, 1.0);
+
     final paint = Paint()
       ..shader = RadialGradient(
-        center: Alignment(
-          (mousePos.dx / size.width) * 2 - 1,
-          (mousePos.dy / size.height) * 2 - 1,
-        ),
+        center: Alignment(normX, normY),
         radius: 0.85,
-        colors: [
-          glowColor.withValues(alpha: 0.10),
-          Colors.transparent,
-        ],
+        colors: [glowColor.withValues(alpha: 0.10), Colors.transparent],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
@@ -187,7 +192,6 @@ class _SpotlightPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SpotlightPainter oldDelegate) {
-    return oldDelegate.mousePos != mousePos ||
-        oldDelegate.glowColor != glowColor;
+    return oldDelegate.mousePos != mousePos || oldDelegate.glowColor != glowColor;
   }
 }
