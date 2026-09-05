@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../animations/glow_border_card.dart';
 
 /// Simulated modern mobile device frame running an interactive Flutter mini-app
 /// showcasing Vyshnav's real-world production projects.
@@ -56,33 +57,39 @@ class _InteractivePhoneMockupState extends State<InteractivePhoneMockup>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 320,
-      height: 580,
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(42),
-        border: Border.all(
-          color: AppColors.cyan.withValues(alpha: 0.35),
-          width: 2.5,
+    return GlowBorderCard(
+      borderRadius: 42,
+      borderWidth: 2.0,
+      glowColors: const [
+        AppColors.cyan,
+        AppColors.purple,
+        Color(0xFF3B82F6),
+        Colors.transparent,
+        AppColors.cyan,
+      ],
+      child: Container(
+        width: 320,
+        height: 580,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(40),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.7),
+              blurRadius: 35,
+              spreadRadius: 5,
+              offset: const Offset(0, 15),
+            ),
+            BoxShadow(
+              color: AppColors.cyan.withValues(alpha: 0.15),
+              blurRadius: 40,
+              spreadRadius: 2,
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.7),
-            blurRadius: 35,
-            spreadRadius: 5,
-            offset: const Offset(0, 15),
-          ),
-          BoxShadow(
-            color: AppColors.cyan.withValues(alpha: 0.15),
-            blurRadius: 40,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
           // Dynamic Island / Speaker Notch
           _buildPhoneHeader(),
 
@@ -113,6 +120,7 @@ class _InteractivePhoneMockupState extends State<InteractivePhoneMockup>
           _buildHomeIndicator(),
         ],
       ),
+    ),
     );
   }
 
@@ -572,7 +580,15 @@ class _InteractivePhoneMockupState extends State<InteractivePhoneMockup>
                     ),
                   ),
                 ),
-                // Center Warehouse Icon
+
+                // Animated Sweeping Radar Beam
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _RadarSweepPainter(sweepAngle: _driverPosAngle),
+                  ),
+                ),
+
+                // Center Warehouse Hub Icon
                 const Icon(Icons.hub_rounded, size: 16, color: AppColors.cyan),
 
                 // Moving Driver Dot on circle path
@@ -656,11 +672,22 @@ class _InteractivePhoneMockupState extends State<InteractivePhoneMockup>
                             : 'Agora Voice Communication',
                         style: AppTypography.titleMedium.copyWith(fontSize: 11),
                       ),
-                      Text(
-                        _isInAgoraCall
-                            ? 'HD Stream (48 kHz)'
-                            : 'Direct Party <-> Driver Voice',
-                        style: AppTypography.bodySmall.copyWith(fontSize: 10),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _isInAgoraCall
+                                  ? 'HD Stream (48 kHz) '
+                                  : 'Direct Party <-> Driver Voice',
+                              style: AppTypography.bodySmall.copyWith(fontSize: 10),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (_isInAgoraCall) ...[
+                            const SizedBox(width: 4),
+                            _VoiceWaveformBars(animation: _tickerController),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -854,9 +881,20 @@ class _InteractivePhoneMockupState extends State<InteractivePhoneMockup>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: _isSigV4Syncing
+                    ? AppColors.emerald.withValues(alpha: 0.2)
+                    : const Color(0xFF1E293B),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.emerald),
+                boxShadow: _isSigV4Syncing
+                    ? [
+                        BoxShadow(
+                          color: AppColors.emerald.withValues(alpha: 0.5),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : [],
               ),
               alignment: Alignment.center,
               child: _isSigV4Syncing
@@ -906,3 +944,108 @@ class _InteractivePhoneMockupState extends State<InteractivePhoneMockup>
     );
   }
 }
+
+/// Sweeping tactical radar beam painter with 360-degree radar fan beam
+class _RadarSweepPainter extends CustomPainter {
+  final double sweepAngle;
+
+  _RadarSweepPainter({required this.sweepAngle});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!size.width.isFinite || !size.height.isFinite || size.width <= 0 || size.height <= 0) {
+      return;
+    }
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) * 0.42;
+
+    // Crosshair lines
+    final crossPaint = Paint()
+      ..color = AppColors.cyan.withValues(alpha: 0.12)
+      ..strokeWidth = 1.0;
+    canvas.drawLine(
+      Offset(center.dx - radius, center.dy),
+      Offset(center.dx + radius, center.dy),
+      crossPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx, center.dy - radius),
+      Offset(center.dx, center.dy + radius),
+      crossPaint,
+    );
+
+    // Radar fan gradient beam
+    final sweepPaint = Paint()
+      ..shader = SweepGradient(
+        center: Alignment.center,
+        startAngle: 0.0,
+        endAngle: math.pi * 0.6,
+        colors: [
+          AppColors.cyan.withValues(alpha: 0.35),
+          AppColors.purple.withValues(alpha: 0.15),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.5, 1.0],
+        transform: GradientRotation(sweepAngle),
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+
+    canvas.drawCircle(center, radius, sweepPaint);
+
+    // Leading sweep ray line
+    final linePaint = Paint()
+      ..color = AppColors.cyan.withValues(alpha: 0.75)
+      ..strokeWidth = 1.5;
+    final endPoint = Offset(
+      center.dx + radius * math.cos(sweepAngle),
+      center.dy + radius * math.sin(sweepAngle),
+    );
+    canvas.drawLine(center, endPoint, linePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadarSweepPainter oldDelegate) {
+    return oldDelegate.sweepAngle != sweepAngle;
+  }
+}
+
+/// Live sound frequency waveform bars showing voice activity
+class _VoiceWaveformBars extends StatelessWidget {
+  final Animation<double> animation;
+
+  const _VoiceWaveformBars({required this.animation});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final val = animation.value;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: List.generate(5, (index) {
+            final phase = index * 0.8;
+            final height = 4.0 + 10.0 * (math.sin(val * 2 * math.pi * 2 + phase).abs());
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 1.5),
+              width: 3,
+              height: height,
+              decoration: BoxDecoration(
+                color: index % 2 == 0 ? AppColors.cyan : AppColors.purple,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: [
+                  BoxShadow(
+                    color: (index % 2 == 0 ? AppColors.cyan : AppColors.purple).withValues(alpha: 0.5),
+                    blurRadius: 3,
+                  ),
+                ],
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+}
+

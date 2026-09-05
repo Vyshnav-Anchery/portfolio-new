@@ -10,7 +10,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(const VyshnavPortfolioApp());
-    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify key portfolio elements exist
     expect(find.text('Vyshnav A'), findsWidgets);
@@ -24,7 +24,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(const VyshnavPortfolioApp());
-    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify key portfolio elements exist
     expect(find.text('Vyshnav A'), findsWidgets);

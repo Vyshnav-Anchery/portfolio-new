@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
@@ -228,7 +229,12 @@ class _BlocSimulatorWidgetState extends State<BlocSimulatorWidget>
               ),
             ],
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
+
+          // Luminous Traveling Data Packet Pipeline Track
+          _buildPacketPipelineTrack(),
+
+          const SizedBox(height: 12),
 
           // 4 Architecture Flow Nodes
           if (isDesktop)
@@ -300,6 +306,156 @@ class _BlocSimulatorWidgetState extends State<BlocSimulatorWidget>
     );
   }
 
+  Widget _buildPacketPipelineTrack() {
+    return AnimatedBuilder(
+      animation: _animController,
+      builder: (context, _) {
+        final isAnimating = _animController.isAnimating;
+        final progress = _animController.value;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF090E1A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isAnimating
+                  ? AppColors.cyan.withValues(alpha: 0.6)
+                  : AppColors.cardBorder,
+              width: isAnimating ? 1.5 : 1.0,
+            ),
+            boxShadow: isAnimating
+                ? [
+                    BoxShadow(
+                      color: AppColors.cyan.withValues(alpha: 0.2),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : [],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isAnimating ? AppColors.cyan : AppColors.textMuted,
+                          boxShadow: isAnimating
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.cyan,
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ]
+                              : [],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isAnimating
+                            ? 'LUMINOUS DATA PACKET STREAM ACTIVE'
+                            : 'PIPELINE STANDBY (TRIGGER ANY SCENARIO ABOVE)',
+                        style: AppTypography.codeBadge.copyWith(
+                          fontSize: 10,
+                          color: isAnimating ? AppColors.cyan : AppColors.textMuted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    isAnimating
+                        ? '${(progress * 100).toInt()}% • Step $_activeStep/4'
+                        : 'READY',
+                    style: AppTypography.codeBadge.copyWith(
+                      fontSize: 10,
+                      color: isAnimating ? AppColors.emerald : AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Track with glowing traveling packet
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final trackWidth = constraints.maxWidth;
+                  final packetX = (progress * trackWidth).clamp(0.0, trackWidth);
+
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Base rail track
+                      Container(
+                        height: 4,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      // Progress gradient fill
+                      if (isAnimating)
+                        Container(
+                          height: 4,
+                          width: packetX,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppColors.cyan,
+                                AppColors.purple,
+                                AppColors.emerald,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      // Luminous Traveling Photon Packet
+                      if (isAnimating)
+                        Positioned(
+                          left: math.max(0.0, packetX - 7),
+                          top: -5,
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.cyan,
+                                  blurRadius: 10,
+                                  spreadRadius: 3,
+                                ),
+                                BoxShadow(
+                                  color: AppColors.purple,
+                                  blurRadius: 18,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildDesktopNodes() {
     return Row(
       children: [
@@ -314,7 +470,10 @@ class _BlocSimulatorWidgetState extends State<BlocSimulatorWidget>
             isActive: _activeStep == 1,
           ),
         ),
-        _buildFlowArrow(isActive: _activeStep == 1 || _activeStep == 2),
+        _buildFlowArrow(
+          isActive: _activeStep == 1 || _activeStep == 2,
+          isReverse: false,
+        ),
         Expanded(
           child: _buildNodeCard(
             stepNumber: 2,
@@ -326,7 +485,10 @@ class _BlocSimulatorWidgetState extends State<BlocSimulatorWidget>
             isActive: _activeStep == 2 || _activeStep == 4,
           ),
         ),
-        _buildFlowArrow(isActive: _activeStep == 2 || _activeStep == 3),
+        _buildFlowArrow(
+          isActive: _activeStep == 2 || _activeStep == 3,
+          isReverse: false,
+        ),
         Expanded(
           child: _buildNodeCard(
             stepNumber: 3,
@@ -338,7 +500,10 @@ class _BlocSimulatorWidgetState extends State<BlocSimulatorWidget>
             isActive: _activeStep == 3,
           ),
         ),
-        _buildFlowArrow(isActive: _activeStep == 3 || _activeStep == 4),
+        _buildFlowArrow(
+          isActive: _activeStep == 3 || _activeStep == 4,
+          isReverse: _activeStep == 4,
+        ),
         Expanded(
           child: _buildNodeCard(
             stepNumber: 4,
@@ -366,7 +531,10 @@ class _BlocSimulatorWidgetState extends State<BlocSimulatorWidget>
           color: AppColors.cyan,
           isActive: _activeStep == 1,
         ),
-        const SizedBox(height: 8),
+        _buildVerticalFlowArrow(
+          isActive: _activeStep == 1 || _activeStep == 2,
+          isReverse: false,
+        ),
         _buildNodeCard(
           stepNumber: 2,
           title: 'BLoC State Machine',
@@ -376,7 +544,10 @@ class _BlocSimulatorWidgetState extends State<BlocSimulatorWidget>
           color: AppColors.purple,
           isActive: _activeStep == 2 || _activeStep == 4,
         ),
-        const SizedBox(height: 8),
+        _buildVerticalFlowArrow(
+          isActive: _activeStep == 2 || _activeStep == 3,
+          isReverse: false,
+        ),
         _buildNodeCard(
           stepNumber: 3,
           title: 'Domain Layer',
@@ -386,7 +557,10 @@ class _BlocSimulatorWidgetState extends State<BlocSimulatorWidget>
           color: AppColors.blue,
           isActive: _activeStep == 3,
         ),
-        const SizedBox(height: 8),
+        _buildVerticalFlowArrow(
+          isActive: _activeStep == 3 || _activeStep == 4,
+          isReverse: _activeStep == 4,
+        ),
         _buildNodeCard(
           stepNumber: 4,
           title: 'Data Sources',
@@ -400,15 +574,74 @@ class _BlocSimulatorWidgetState extends State<BlocSimulatorWidget>
     );
   }
 
-  Widget _buildFlowArrow({required bool isActive}) {
+  Widget _buildFlowArrow({required bool isActive, bool isReverse = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isActive
+              ? (isReverse ? AppColors.purple : AppColors.cyan).withValues(alpha: 0.15)
+              : Colors.transparent,
+          border: Border.all(
+            color: isActive
+                ? (isReverse ? AppColors.purple : AppColors.cyan).withValues(alpha: 0.4)
+                : Colors.transparent,
+          ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: (isReverse ? AppColors.purple : AppColors.cyan).withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : [],
+        ),
         child: Icon(
-          Icons.arrow_forward_rounded,
-          size: 18,
-          color: isActive ? AppColors.cyan : AppColors.cardBorder,
+          isReverse ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded,
+          size: 16,
+          color: isActive
+              ? (isReverse ? AppColors.purple : AppColors.cyan)
+              : AppColors.cardBorder,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerticalFlowArrow({required bool isActive, bool isReverse = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isActive
+              ? (isReverse ? AppColors.purple : AppColors.cyan).withValues(alpha: 0.15)
+              : Colors.transparent,
+          border: Border.all(
+            color: isActive
+                ? (isReverse ? AppColors.purple : AppColors.cyan).withValues(alpha: 0.4)
+                : Colors.transparent,
+          ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: (isReverse ? AppColors.purple : AppColors.cyan).withValues(alpha: 0.35),
+                    blurRadius: 8,
+                  ),
+                ]
+              : [],
+        ),
+        child: Icon(
+          isReverse ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+          size: 14,
+          color: isActive
+              ? (isReverse ? AppColors.purple : AppColors.cyan)
+              : AppColors.cardBorder,
         ),
       ),
     );

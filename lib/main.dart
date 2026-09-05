@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_typography.dart';
+import 'widgets/animations/cursor_aura.dart';
+import 'widgets/animations/fade_slide_in.dart';
 import 'widgets/animations/particle_background.dart';
 import 'widgets/architecture/bloc_simulator_widget.dart';
 import 'widgets/contact/contact_section.dart';
@@ -108,84 +110,106 @@ class _PortfolioHomePageState extends State<PortfolioHomePage> {
     final isDesktop = screenWidth > 980;
 
     return Scaffold(
-      body: ParticleBackground(
-        child: Stack(
-          children: [
-            // Scrollable Content
-            Positioned.fill(
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 70), // Spacer for sticky navbar
+      body: CursorAuraFollower(
+        child: ParticleBackground(
+          child: Stack(
+            children: [
+              // Scrollable Content
+              Positioned.fill(
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 70), // Spacer for sticky navbar
 
-                    // 1. Hero Section
-                    Container(
-                      key: _heroKey,
-                      child: HeroSection(
-                        onExploreProjects: () =>
-                            _scrollToSection(_projectsKey),
-                        onTestArchitecture: () =>
-                            _scrollToSection(_architectureKey),
-                        onContactTap: () => _scrollToSection(_contactKey),
-                        onViewResume: _openResumeModal,
+                      // 1. Hero Section
+                      FadeSlideIn(
+                        delay: Duration.zero,
+                        child: Container(
+                          key: _heroKey,
+                          child: HeroSection(
+                            onExploreProjects: () =>
+                                _scrollToSection(_projectsKey),
+                            onTestArchitecture: () =>
+                                _scrollToSection(_architectureKey),
+                            onContactTap: () => _scrollToSection(_contactKey),
+                            onViewResume: _openResumeModal,
+                          ),
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 30),
+                      const SizedBox(height: 30),
 
-                    // 2. Skills Matrix
-                    Container(
-                      key: _skillsKey,
-                      child: const SkillsMatrixSection(),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // 3. Interactive Architecture & BLoC Stream Simulator
-                    Container(
-                      key: _architectureKey,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isDesktop ? 48.0 : 20.0,
-                        vertical: 30.0,
+                      // 2. Skills Matrix
+                      FadeSlideIn(
+                        delay: const Duration(milliseconds: 100),
+                        child: Container(
+                          key: _skillsKey,
+                          child: const SkillsMatrixSection(),
+                        ),
                       ),
-                      child: const BlocSimulatorWidget(),
-                    ),
 
-                    const SizedBox(height: 30),
+                      const SizedBox(height: 30),
 
-                    // 4. Featured Production Projects & Client Ecosystem
-                    Container(
-                      key: _projectsKey,
-                      child: const ProjectsSection(),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // 5. Experience & Education Timeline
-                    Container(
-                      key: _experienceKey,
-                      child: const ExperienceTimeline(),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // 6. Contact Section & Quick Message Form
-                    Container(
-                      key: _contactKey,
-                      child: ContactSection(
-                        onViewResume: _openResumeModal,
+                      // 3. Interactive Architecture & BLoC Stream Simulator
+                      FadeSlideIn(
+                        delay: const Duration(milliseconds: 150),
+                        child: Container(
+                          key: _architectureKey,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 48.0 : 20.0,
+                            vertical: 30.0,
+                          ),
+                          child: const BlocSimulatorWidget(),
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 40),
+                      const SizedBox(height: 30),
 
-                    // 7. Footer
-                    _buildFooter(isDesktop),
-                  ],
+                      // 4. Featured Production Projects & Client Ecosystem
+                      FadeSlideIn(
+                        delay: const Duration(milliseconds: 200),
+                        child: Container(
+                          key: _projectsKey,
+                          child: const ProjectsSection(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // 5. Experience & Education Timeline
+                      FadeSlideIn(
+                        delay: const Duration(milliseconds: 250),
+                        child: Container(
+                          key: _experienceKey,
+                          child: const ExperienceTimeline(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // 6. Contact Section & Quick Message Form
+                      FadeSlideIn(
+                        delay: const Duration(milliseconds: 300),
+                        child: Container(
+                          key: _contactKey,
+                          child: ContactSection(
+                            onViewResume: _openResumeModal,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // 7. Footer
+                      FadeSlideIn(
+                        delay: const Duration(milliseconds: 350),
+                        child: _buildFooter(isDesktop),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
             // Sticky Blurred Glass Navbar
             Positioned(
@@ -245,6 +269,7 @@ class _PortfolioHomePageState extends State<PortfolioHomePage> {
               ),
           ],
         ),
+      ),
       ),
     );
   }
